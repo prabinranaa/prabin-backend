@@ -1,7 +1,10 @@
 {
   "dependencies": {
-    "better-sqlite3": "^12.9.0",
     "cors": "^2.8.6",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "sql.js": "^1.14.1"
+  },
+  "optionalDependencies": {
+    "@libsqlite3/win32-x64": "npm:null@*"
   }
 }
