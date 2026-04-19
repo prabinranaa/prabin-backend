@@ -2,31 +2,33 @@ const express = require('express')
 const cors = require('cors')
 const path = require('path')
 const fs = require('fs')
+const { MongoClient } = require('mongodb')
 
 const app = express()
 app.use(cors())
 app.use(express.json())
 
-// Simple JSON database
-const DB_PATH = path.join(__dirname, 'gamedata.json')
+const MONGODB_URI = process.env.MONGODB_URI
+const DB_NAME = 'praveensystem'
+
+let db
 
 const defaultData = {
   player: {
-    id: 1,
     name: 'PRAVEEN RANA',
     class: 'ARCHITECH',
     title: 'MONARCH',
     level: 1,
     exp: 0,
-    requiredExp: 450,
+    requiredExp: 120,
     points: 0
   },
   stats: {
-    physique: { level: 1, exp: 0, requiredExp: 150 },
-    mind: { level: 1, exp: 0, requiredExp: 150 },
-    wealth: { level: 1, exp: 0, requiredExp: 150 },
-    skill: { level: 1, exp: 0, requiredExp: 150 },
-    discipline: { level: 1, exp: 0, requiredExp: 150 }
+    physique: { level: 1, exp: 0, requiredExp: 120 },
+    mind: { level: 1, exp: 0, requiredExp: 120 },
+    wealth: { level: 1, exp: 0, requiredExp: 120 },
+    skill: { level: 1, exp: 0, requiredExp: 120 },
+    discipline: { level: 1, exp: 0, requiredExp: 120 }
   },
   quests: [
     { id: 1, stat: 'mind', title: 'Read for 20 minutes', exp: 15, points: 10, difficulty: 'Easy', completed: false },
@@ -37,131 +39,107 @@ const defaultData = {
   ],
   rewards: [
     { id: 1, tier: 'bronze', title: 'Break Day', description: 'A full guilt-free entertainment day.', cost: 100, requirement: null },
-    { id: 2, tier: 'bronze', title: 'Chill Session', description: 'Watch your favourite show for 3 hours guilt-free.', cost: 80, requirement: null },
-    { id: 3, tier: 'bronze', title: 'Game Night', description: 'Play any game you want for the entire evening.', cost: 60, requirement: null },
+    { id: 2, tier: 'bronze', title: 'Chill Session', description: 'Watch your favourite show for 3 hours.', cost: 80, requirement: null },
+    { id: 3, tier: 'bronze', title: 'Game Night', description: 'Play any game you want for the evening.', cost: 60, requirement: null },
     { id: 4, tier: 'silver', title: 'Treat Yourself', description: 'A full day out on yourself.', cost: 500, requirement: { stat: 'wealth', level: 3 } },
     { id: 5, tier: 'silver', title: 'Big Purchase', description: 'Buy something you have been holding back on.', cost: 400, requirement: { stat: 'wealth', level: 3 } },
     { id: 6, tier: 'silver', title: 'Rest Day', description: 'A complete day off. No quests, no pressure.', cost: 300, requirement: null },
-    { id: 7, tier: 'legendary', title: "The Monarch's Reward", description: 'A weekend trip or big purchase you have been dreaming about.', cost: 1500, requirement: { stat: 'wealth', level: 10 } },
+    { id: 7, tier: 'legendary', title: "The Monarch's Reward", description: 'A weekend trip or big purchase.', cost: 1500, requirement: { stat: 'wealth', level: 10 } },
     { id: 8, tier: 'legendary', title: 'Level Up IRL', description: 'Invest in a serious course or mentorship.', cost: 1200, requirement: { stat: 'skill', level: 8 } },
-    { id: 9, tier: 'legendary', title: 'Full Experience Day', description: 'Cinema, restaurant, shopping – everything in one day.', cost: 1000, requirement: { stat: 'wealth', level: 8 } }
+    { id: 9, tier: 'legendary', title: 'Full Experience Day', description: 'Cinema, restaurant, shopping – everything.', cost: 1000, requirement: { stat: 'wealth', level: 8 } }
   ],
   streak: { value: 0, lastActiveDate: '' },
   goals: { value: '' }
 }
 
-// Read database
-const readDB = () => {
-  if (!fs.existsSync(DB_PATH)) {
-    fs.writeFileSync(DB_PATH, JSON.stringify(defaultData, null, 2))
-    return defaultData
-  }
-  return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'))
-}
+async function connectDB() {
+  const client = new MongoClient(MONGODB_URI)
+  await client.connect()
+  db = client.db(DB_NAME)
+  console.log('✅ Connected to MongoDB Atlas')
 
-// Write database
-const writeDB = (data) => {
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2))
+  // Seed default data if empty
+  const player = await db.collection('player').findOne({ id: 1 })
+  if (!player) {
+    await db.collection('player').insertOne({ id: 1, ...defaultData.player })
+    await db.collection('stats').insertOne({ id: 1, ...defaultData.stats })
+    await db.collection('streak').insertOne({ id: 1, ...defaultData.streak })
+    await db.collection('goals').insertOne({ id: 1, ...defaultData.goals })
+    await db.collection('quests').insertMany(defaultData.quests)
+    await db.collection('rewards').insertMany(defaultData.rewards)
+    console.log('✅ Default data seeded')
+  }
 }
 
 // ── ROUTES ──
 
-// GET all data
-app.get('/api/data', (req, res) => {
-  const db = readDB()
-  res.json(db)
+app.get('/api/data', async (req, res) => {
+  const player = await db.collection('player').findOne({ id: 1 })
+  const stats = await db.collection('stats').findOne({ id: 1 })
+  const quests = await db.collection('quests').find().toArray()
+  const rewards = await db.collection('rewards').find().toArray()
+  const streak = await db.collection('streak').findOne({ id: 1 })
+  const goals = await db.collection('goals').findOne({ id: 1 })
+  res.json({ player, stats, quests, rewards, streak, goals })
 })
 
-// UPDATE player
-app.put('/api/player', (req, res) => {
-  const db = readDB()
-  db.player = { ...db.player, ...req.body }
-  writeDB(db)
+app.put('/api/player', async (req, res) => {
+  await db.collection('player').updateOne({ id: 1 }, { $set: req.body })
   res.json({ success: true })
 })
 
-// UPDATE stats
-app.put('/api/stats', (req, res) => {
-  const db = readDB()
-  db.stats = req.body
-  writeDB(db)
+app.put('/api/stats', async (req, res) => {
+  await db.collection('stats').updateOne({ id: 1 }, { $set: req.body })
   res.json({ success: true })
 })
 
-// GET quests
-app.get('/api/quests', (req, res) => {
-  const db = readDB()
-  res.json(db.quests)
+app.get('/api/quests', async (req, res) => {
+  const quests = await db.collection('quests').find().toArray()
+  res.json(quests)
 })
 
-// ADD quest
-app.post('/api/quests', (req, res) => {
-  const db = readDB()
-  const newQuest = {
-    id: Date.now(),
-    ...req.body,
-    completed: false
-  }
-  db.quests.push(newQuest)
-  writeDB(db)
+app.post('/api/quests', async (req, res) => {
+  const newQuest = { id: Date.now(), ...req.body, completed: false }
+  await db.collection('quests').insertOne(newQuest)
   res.json({ id: newQuest.id })
 })
 
-// UPDATE quest
-app.put('/api/quests/:id', (req, res) => {
-  const db = readDB()
+app.put('/api/quests/:id', async (req, res) => {
   const id = parseInt(req.params.id)
-  db.quests = db.quests.map(q => q.id === id ? { ...q, ...req.body } : q)
-  writeDB(db)
+  await db.collection('quests').updateOne({ id }, { $set: req.body })
   res.json({ success: true })
 })
 
-// DELETE quest
-app.delete('/api/quests/:id', (req, res) => {
-  const db = readDB()
+app.delete('/api/quests/:id', async (req, res) => {
   const id = parseInt(req.params.id)
-  db.quests = db.quests.filter(q => q.id !== id)
-  writeDB(db)
+  await db.collection('quests').deleteOne({ id })
   res.json({ success: true })
 })
 
-// GET rewards
-app.get('/api/rewards', (req, res) => {
-  const db = readDB()
-  res.json(db.rewards)
+app.get('/api/rewards', async (req, res) => {
+  const rewards = await db.collection('rewards').find().toArray()
+  res.json(rewards)
 })
 
-// ADD reward
-app.post('/api/rewards', (req, res) => {
-  const db = readDB()
+app.post('/api/rewards', async (req, res) => {
   const newReward = { id: Date.now(), ...req.body }
-  db.rewards.push(newReward)
-  writeDB(db)
+  await db.collection('rewards').insertOne(newReward)
   res.json({ id: newReward.id })
 })
 
-// DELETE reward
-app.delete('/api/rewards/:id', (req, res) => {
-  const db = readDB()
+app.delete('/api/rewards/:id', async (req, res) => {
   const id = parseInt(req.params.id)
-  db.rewards = db.rewards.filter(r => r.id !== id)
-  writeDB(db)
+  await db.collection('rewards').deleteOne({ id })
   res.json({ success: true })
 })
 
-// UPDATE streak
-app.put('/api/streak', (req, res) => {
-  const db = readDB()
-  db.streak = req.body
-  writeDB(db)
+app.put('/api/streak', async (req, res) => {
+  await db.collection('streak').updateOne({ id: 1 }, { $set: req.body })
   res.json({ success: true })
 })
 
-// UPDATE goals
-app.put('/api/goals', (req, res) => {
-  const db = readDB()
-  db.goals = { value: req.body.value }
-  writeDB(db)
+app.put('/api/goals', async (req, res) => {
+  await db.collection('goals').updateOne({ id: 1 }, { $set: { value: req.body.value } })
   res.json({ success: true })
 })
 
@@ -174,6 +152,7 @@ if (fs.existsSync(path.join(__dirname, 'public'))) {
 }
 
 const PORT = process.env.PORT || 3001
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  await connectDB()
   console.log(`✅ Praveen System backend running on port ${PORT}`)
 })
