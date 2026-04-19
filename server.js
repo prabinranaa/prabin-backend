@@ -154,5 +154,5 @@ if (fs.existsSync(path.join(__dirname, 'public'))) {
 const PORT = process.env.PORT || 3001
 app.listen(PORT, async () => {
   await connectDB()
-  console.log(`✅ Praveen System backend running on port ${PORT}`)
+  console.log(`✅ Praveen System v2 backend running on port ${PORT}`)
 })
