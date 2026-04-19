@@ -152,6 +152,25 @@ if (fs.existsSync(path.join(__dirname, 'public'))) {
 }
 
 const PORT = process.env.PORT || 3001
+
+app.get('/api/reseed', async (req, res) => {
+  await db.collection('player').deleteMany({})
+  await db.collection('stats').deleteMany({})
+  await db.collection('streak').deleteMany({})
+  await db.collection('goals').deleteMany({})
+  await db.collection('quests').deleteMany({})
+  await db.collection('rewards').deleteMany({})
+  
+  await db.collection('player').insertOne({ id: 1, ...defaultData.player })
+  await db.collection('stats').insertOne({ id: 1, ...defaultData.stats })
+  await db.collection('streak').insertOne({ id: 1, ...defaultData.streak })
+  await db.collection('goals').insertOne({ id: 1, ...defaultData.goals })
+  await db.collection('quests').insertMany(defaultData.quests)
+  await db.collection('rewards').insertMany(defaultData.rewards)
+  
+  res.json({ success: true, message: 'Reseeded with fresh data!' })
+})
+
 app.listen(PORT, async () => {
   await connectDB()
   console.log(`✅ Praveen System v2 backend running on port ${PORT}`)
