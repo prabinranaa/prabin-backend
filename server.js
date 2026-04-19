@@ -27,14 +27,14 @@ const defaultData = {
     physique: { level: 1, exp: 0, requiredExp: 120 },
     mind: { level: 1, exp: 0, requiredExp: 120 },
     wealth: { level: 1, exp: 0, requiredExp: 120 },
-    skill: { level: 1, exp: 0, requiredExp: 120 },
+    build: { level: 1, exp: 0, requiredExp: 120 },
     discipline: { level: 1, exp: 0, requiredExp: 120 }
   },
   quests: [
     { id: 1, stat: 'mind', title: 'Read for 20 minutes', exp: 15, points: 10, difficulty: 'Easy', completed: false },
     { id: 2, stat: 'wealth', title: 'Learn one business concept today', exp: 15, points: 10, difficulty: 'Easy', completed: false },
     { id: 3, stat: 'physique', title: 'Complete 20 push-ups and a 15 minute walk', exp: 15, points: 10, difficulty: 'Easy', completed: false },
-    { id: 4, stat: 'skill', title: 'Practice a new skill for 30 minutes', exp: 15, points: 10, difficulty: 'Easy', completed: false },
+    { id: 4, stat: 'build', title: 'Work on a project or learn something technical for 30 minutes', exp: 15, points: 10, difficulty: 'Easy', completed: false },
     { id: 5, stat: 'discipline', title: 'Wake up on time and follow morning routine', exp: 15, points: 10, difficulty: 'Easy', completed: false }
   ],
   rewards: [
