@@ -59,19 +59,33 @@ async function connectDB() {
   console.log('✅ Connected to MongoDB Atlas')
 
   const playerCount = await db.collection('player').countDocuments()
-  console.log(`Player documents found: ${playerCount}`)
+  const questCount = await db.collection('quests').countDocuments()
+  const rewardCount = await db.collection('rewards').countDocuments()
   
+  console.log(`Player: ${playerCount}, Quests: ${questCount}, Rewards: ${rewardCount}`)
+
   if (playerCount === 0) {
-    console.log('No data found - seeding defaults...')
     await db.collection('player').insertOne({ id: 1, ...defaultData.player })
     await db.collection('stats').insertOne({ id: 1, ...defaultData.stats })
     await db.collection('streak').insertOne({ id: 1, ...defaultData.streak })
     await db.collection('goals').insertOne({ id: 1, ...defaultData.goals })
-    await db.collection('quests').insertMany(defaultData.quests)
-    await db.collection('rewards').insertMany(defaultData.rewards)
-    console.log('✅ Default data seeded')
+    console.log('✅ Player data seeded')
   } else {
-    console.log('✅ Existing data found - skipping seed')
+    console.log('✅ Player data exists - skipping')
+  }
+
+  if (questCount === 0) {
+    await db.collection('quests').insertMany(defaultData.quests)
+    console.log('✅ Quests seeded')
+  } else {
+    console.log('✅ Quests exist - skipping')
+  }
+
+  if (rewardCount === 0) {
+    await db.collection('rewards').insertMany(defaultData.rewards)
+    console.log('✅ Rewards seeded')
+  } else {
+    console.log('✅ Rewards exist - skipping')
   }
 }
 
