@@ -45,7 +45,7 @@ const defaultData = {
     { id: 5, tier: 'silver', title: 'Big Purchase', description: 'Buy something you have been holding back on.', cost: 400, requirement: { stat: 'wealth', level: 3 } },
     { id: 6, tier: 'silver', title: 'Rest Day', description: 'A complete day off. No quests, no pressure.', cost: 300, requirement: null },
     { id: 7, tier: 'legendary', title: "The Monarch's Reward", description: 'A weekend trip or big purchase.', cost: 1500, requirement: { stat: 'wealth', level: 10 } },
-    { id: 8, tier: 'legendary', title: 'Level Up IRL', description: 'Invest in a serious course or mentorship.', cost: 1200, requirement: { stat: 'skill', level: 8 } },
+    { id: 8, tier: 'legendary', title: 'Level Up IRL', description: 'Invest in a serious course or mentorship.', cost: 1200, requirement: { stat: 'build', level: 8 } },
     { id: 9, tier: 'legendary', title: 'Full Experience Day', description: 'Cinema, restaurant, shopping – everything.', cost: 1000, requirement: { stat: 'wealth', level: 8 } }
   ],
   streak: { value: 0, lastActiveDate: '' },
@@ -58,34 +58,20 @@ async function connectDB() {
   db = client.db(DB_NAME)
   console.log('✅ Connected to MongoDB Atlas')
 
-  const playerCount = await db.collection('player').countDocuments()
-  const questCount = await db.collection('quests').countDocuments()
-  const rewardCount = await db.collection('rewards').countDocuments()
-  
-  console.log(`Player: ${playerCount}, Quests: ${questCount}, Rewards: ${rewardCount}`)
+  const initialized = await db.collection('config').findOne({ key: 'initialized' })
 
-  if (playerCount === 0) {
+  if (!initialized) {
+    console.log('First time setup - seeding defaults...')
     await db.collection('player').insertOne({ id: 1, ...defaultData.player })
     await db.collection('stats').insertOne({ id: 1, ...defaultData.stats })
     await db.collection('streak').insertOne({ id: 1, ...defaultData.streak })
     await db.collection('goals').insertOne({ id: 1, ...defaultData.goals })
-    console.log('✅ Player data seeded')
-  } else {
-    console.log('✅ Player data exists - skipping')
-  }
-
-  if (questCount === 0) {
     await db.collection('quests').insertMany(defaultData.quests)
-    console.log('✅ Quests seeded')
-  } else {
-    console.log('✅ Quests exist - skipping')
-  }
-
-  if (rewardCount === 0) {
     await db.collection('rewards').insertMany(defaultData.rewards)
-    console.log('✅ Rewards seeded')
+    await db.collection('config').insertOne({ key: 'initialized', value: true })
+    console.log('✅ Default data seeded and marked as initialized')
   } else {
-    console.log('✅ Rewards exist - skipping')
+    console.log('✅ App already initialized - skipping seed')
   }
 }
 
@@ -102,12 +88,14 @@ app.get('/api/data', async (req, res) => {
 })
 
 app.put('/api/player', async (req, res) => {
-  await db.collection('player').updateOne({ id: 1 }, { $set: req.body })
+  const { _id, ...data } = req.body
+  await db.collection('player').updateOne({ id: 1 }, { $set: data })
   res.json({ success: true })
 })
 
 app.put('/api/stats', async (req, res) => {
-  await db.collection('stats').updateOne({ id: 1 }, { $set: req.body })
+  const { _id, id, ...data } = req.body
+  await db.collection('stats').updateOne({ id: 1 }, { $set: data })
   res.json({ success: true })
 })
 
@@ -124,7 +112,8 @@ app.post('/api/quests', async (req, res) => {
 
 app.put('/api/quests/:id', async (req, res) => {
   const id = parseInt(req.params.id)
-  await db.collection('quests').updateOne({ id }, { $set: req.body })
+  const { _id, ...data } = req.body
+  await db.collection('quests').updateOne({ id }, { $set: data })
   res.json({ success: true })
 })
 
@@ -152,7 +141,8 @@ app.delete('/api/rewards/:id', async (req, res) => {
 })
 
 app.put('/api/streak', async (req, res) => {
-  await db.collection('streak').updateOne({ id: 1 }, { $set: req.body })
+  const { _id, ...data } = req.body
+  await db.collection('streak').updateOne({ id: 1 }, { $set: data })
   res.json({ success: true })
 })
 
@@ -170,24 +160,6 @@ if (fs.existsSync(path.join(__dirname, 'public'))) {
 }
 
 const PORT = process.env.PORT || 3001
-
-app.get('/api/reseed', async (req, res) => {
-  await db.collection('player').deleteMany({})
-  await db.collection('stats').deleteMany({})
-  await db.collection('streak').deleteMany({})
-  await db.collection('goals').deleteMany({})
-  await db.collection('quests').deleteMany({})
-  await db.collection('rewards').deleteMany({})
-  
-  await db.collection('player').insertOne({ id: 1, ...defaultData.player })
-  await db.collection('stats').insertOne({ id: 1, ...defaultData.stats })
-  await db.collection('streak').insertOne({ id: 1, ...defaultData.streak })
-  await db.collection('goals').insertOne({ id: 1, ...defaultData.goals })
-  await db.collection('quests').insertMany(defaultData.quests)
-  await db.collection('rewards').insertMany(defaultData.rewards)
-  
-  res.json({ success: true, message: 'Reseeded with fresh data!' })
-})
 
 app.listen(PORT, async () => {
   await connectDB()
