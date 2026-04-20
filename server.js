@@ -58,9 +58,11 @@ async function connectDB() {
   db = client.db(DB_NAME)
   console.log('✅ Connected to MongoDB Atlas')
 
-  // Seed default data if empty
-  const player = await db.collection('player').findOne({ id: 1 })
-  if (!player) {
+  const playerCount = await db.collection('player').countDocuments()
+  console.log(`Player documents found: ${playerCount}`)
+  
+  if (playerCount === 0) {
+    console.log('No data found - seeding defaults...')
     await db.collection('player').insertOne({ id: 1, ...defaultData.player })
     await db.collection('stats').insertOne({ id: 1, ...defaultData.stats })
     await db.collection('streak').insertOne({ id: 1, ...defaultData.streak })
@@ -68,6 +70,8 @@ async function connectDB() {
     await db.collection('quests').insertMany(defaultData.quests)
     await db.collection('rewards').insertMany(defaultData.rewards)
     console.log('✅ Default data seeded')
+  } else {
+    console.log('✅ Existing data found - skipping seed')
   }
 }
 
