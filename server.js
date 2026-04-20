@@ -89,7 +89,9 @@ app.get('/api/data', async (req, res) => {
 
 app.put('/api/player', async (req, res) => {
   const { _id, ...data } = req.body
-  await db.collection('player').updateOne({ id: 1 }, { $set: data })
+  console.log('Updating player with:', JSON.stringify(data))
+  const result = await db.collection('player').updateOne({ id: 1 }, { $set: data })
+  console.log('Update result:', JSON.stringify(result))
   res.json({ success: true })
 })
 
